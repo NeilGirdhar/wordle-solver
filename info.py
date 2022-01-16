@@ -44,12 +44,12 @@ class Info:
             blocked.append(frozenset(this_block))
         return cls(frozenset(discovered), tuple(blocked))
 
-    def trim(self, word_list: Iterable[str]) -> list[str]:
-        return [word
-                for word in word_list
-                if (all(d in word for d in self.discovered)
-                    and not any(w in b
-                                for (w, b) in zip(word, self.blocked)))]
+    def trim(self, word_list: Iterable[str]) -> tuple[str, ...]:
+        return tuple(word
+                     for word in word_list
+                     if (all(d in word for d in self.discovered)
+                         and not any(w in b
+                                     for (w, b) in zip(word, self.blocked))))
 
     def add_guess(self, guess: str, solution: str) -> 'Info':
         discovered = self.discovered | frozenset(guess) & frozenset(solution)
