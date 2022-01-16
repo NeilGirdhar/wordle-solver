@@ -11,8 +11,8 @@ T = TypeVar('T', bound='Tree')
 @dataclass(frozen=True)
 class Tree:
     hard_mode: bool
-    possible_guesses: tuple[str, ...]
-    possible_solutions: tuple[str, ...]
+    possible_guesses: frozenset[str]
+    possible_solutions: frozenset[str]
 
     @classmethod
     def create(cls: Type[T], hard_mode: bool, info: Info) -> T:
@@ -23,13 +23,13 @@ class Tree:
 
         words = read_and_strip('words.txt')
         solutions = read_and_strip('solutions.txt')
-        possible_guesses = info.trim(words) if hard_mode else tuple(words)
+        possible_guesses = info.trim(words) if hard_mode else frozenset(words)
         possible_solutions = info.trim(solutions)
         return cls(hard_mode, possible_guesses, possible_solutions)
 
     def generate_info(self) -> Info:
         word_list = self.possible_guesses if self.hard_mode else self.possible_solutions
-        discovered = frozenset("".join(word_list))
+        discovered = frozenset.intersection(*[frozenset(w) for w in word_list])
         blocked = [set(_set_lower)] * 5
         for word in word_list:
             for c, b in zip(word, blocked):
@@ -39,15 +39,16 @@ class Tree:
     @cache
     def steps_to_solve(self) -> tuple[int, str]:
         "Worst case number of possible steps after guess."
-        print("Running", hash(self), self.possible_solutions)
+        print("Running", self.possible_solutions)
         if len(self.possible_solutions) <= 1:
             return 0, ""
         best_guess_steps = 1000000
         best_guess = ""
         info = self.generate_info()
+        # print(self.possible_guesses)
         for guess in self.possible_guesses:
             s = set[Info]()
-            worst_case_for_guess = 1000000
+            worst_case_for_guess = 0
             for solution in self.possible_solutions:
                 new_info = info.add_guess(guess, solution)
                 if new_info in s:
@@ -58,13 +59,13 @@ class Tree:
                                  if self.hard_mode else self.possible_guesses),
                                 new_info.trim(self.possible_solutions))
                 if len(new_tree.possible_solutions) == 1:
-                    steps_to_solve = 0
+                    steps_to_solve = 1
                 elif set(new_tree.possible_solutions) == set(self.possible_solutions):
                     worst_case_for_guess = 1000000
                     break
                 else:
-                    steps_to_solve = new_tree.steps_to_solve()[0]
-                worst_case_for_guess = min(worst_case_for_guess, steps_to_solve)
+                    steps_to_solve = new_tree.steps_to_solve()[0] + 1
+                worst_case_for_guess = max(worst_case_for_guess, steps_to_solve)
             if worst_case_for_guess < best_guess_steps:
                 best_guess = guess
                 best_guess_steps = worst_case_for_guess

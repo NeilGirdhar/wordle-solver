@@ -7,12 +7,12 @@ from tree import Tree
 # trained
 
 # Settings.
-hard_mode = True
+hard_mode = False
 
 # Set constants for settings and past guesses.
-history: list[str] = ['toeas']
-placed: str = '  ea '
-extra_discovered: str = 's'
+history: list[str] = ['toeas', 'spine']
+placed: str = 's    '
+extra_discovered: str = 'es'
 
 # Convert constants into known information.
 info = Info.create(history=history,
