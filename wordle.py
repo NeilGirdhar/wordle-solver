@@ -1,5 +1,6 @@
 from info import Info
 from tree import Tree
+from itertools import count
 
 # The best opening guesses are:
 # Guess     Worst case  Average case
@@ -20,32 +21,12 @@ extended = False
 
 # Set constants for settings and past guesses.
 history: list[str] = ['raise']
-placed: str = '  i  '
-extra_discovered: str = 'e'
+placed: str = '     '
+extra_discovered: str = ''
 
 # Convert constants into known information.
 info = Info.create(history=history,
                    placed=placed + ' ' * (5 - len(placed)),
                    extra_discovered=extra_discovered)
 tree = Tree.create(info, hard_mode, extended)
-n = len(tree.possible_solutions)
-
-assert n > 0
-
-def show() -> None:
-    print(f"There are {n} possible solutions: {', '.join(tree.possible_solutions)}.")
-
-if n == 1:
-    print(f"The solution is '{next(iter(tree.possible_solutions))}'.")
-elif n <= 10:
-    show()
-    steps, guess = tree.steps_to_solve()
-    print(f"Guess '{guess}' to solve the problem in {steps} steps.")
-else:
-    if n < 30:
-        show()
-    else:
-        print(f"There are {n} possible solutions.")
-    best = tree.reduce_space(info)
-    print("Guess     Worst case  Average case",
-          *[f"{a}     {b}           {c:.2f}" for a, (b, c) in best[:12]], sep='\n')
+tree.display_instructions(info)

@@ -24,20 +24,30 @@ class Info:
         """
         if len(placed) != 5:
             raise ValueError
+        placed_set = frozenset(placed) - frozenset(' ')
+        if placed_set - _set_lower:
+            raise ValueError("Non-letters placed.")
 
-        discovered = set(extra_discovered) | (set(placed) - set(' '))
-        if discovered & _set_lower != discovered:
-            raise ValueError
+        history_set = frozenset(''.join(history))
+        if history_set - _set_lower:
+            raise ValueError("Non-letters in history.")
+
+        discovered = frozenset(extra_discovered) | placed_set
+        if discovered - _set_lower:
+            raise ValueError("Non-letters discovered.")
+
+        if discovered - history_set:
+            raise ValueError("You must be psychic.")
 
         blocked: list[frozenset[str]] = []
         # These characters were in the history, but not marked as discovered.  They can't be
         # anywhere.
-        blocked_everywhere = set(''.join(history)) - set(discovered)
+        blocked_everywhere = history_set - discovered
         for i, p in enumerate(placed):
             if p != ' ':
                 blocked.append(frozenset(_set_lower - set(p)))
                 continue
-            this_block = set(blocked_everywhere)
+            this_block = set(blocked_everywhere)  # Copy.
             for history_word in history:
                 h = history_word[i]
                 this_block.add(h)
