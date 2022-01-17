@@ -1,4 +1,5 @@
 from collections import defaultdict
+import numpy as np
 from dataclasses import dataclass
 from functools import cache
 from typing import Type, TypeVar
@@ -76,12 +77,17 @@ class Tree:
               self.possible_solutions)
         return best_guess_steps, best_guess
 
-    def reduce_space(self, info: Info) -> None:
-        worst_case_for_guess = {}  # Worst case number of possible solutions after guess.
+    def reduce_space(self, info: Info) -> list[tuple[str, tuple[int, float]]]:
+        # Map from guess to tuple of
+        # * worst case number of possible solutions after guess
+        # * average case number of possible solutions after guess
+        worst_case_for_guess = {}
         for guess in self.possible_guesses:
             c = defaultdict[Info, int](int)
             for solution in self.possible_solutions:
                 c[info.add_guess(guess, solution)] += 1
-            worst_case_for_guess[guess] = max(c.values())
-        best = sorted(worst_case_for_guess.items(), key=lambda x_y: x_y[1])
-        print("Ideal guesses:", *[f"{a}: {b}" for a, b in best[:10]], sep='\n')
+            a = np.array(list(c.values()))
+            worst_case = np.amax(a)
+            average_case = np.average(a, weights=a)
+            worst_case_for_guess[guess] = (worst_case, average_case)
+        return sorted(worst_case_for_guess.items(), key=lambda x_y: x_y[1])
