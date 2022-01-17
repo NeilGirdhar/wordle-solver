@@ -90,3 +90,29 @@ class Tree:
             average_case = np.average(a, weights=a)  # type: ignore[no-untyped-call]
             worst_case_for_guess[guess] = (worst_case, average_case)
         return sorted(worst_case_for_guess.items(), key=lambda x_y: x_y[1])
+
+    def best_guess(self, info: Info) -> str:
+        n = len(self.possible_solutions)
+        if n == 1:
+            return next(iter(self.possible_solutions))
+        best = self.reduce_space(info)
+        return best[0][0]
+
+    def display_instructions(self, info: Info) -> None:
+        n = len(self.possible_solutions)
+        assert n > 0
+        if n == 1:
+            print(f"The solution is '{next(iter(self.possible_solutions))}'.")
+            return
+        if n < 30:
+            print(f"There are {n} possible solutions: {', '.join(self.possible_solutions)}.")
+        else:
+            print(f"There are {n} possible solutions.")
+
+        if n <= 10:
+            steps, guess = self.steps_to_solve()
+            print(f"Guess '{guess}' to solve the problem in {steps} steps.")
+        else:
+            best = self.reduce_space(info)
+            print("Guess     Worst case  Average case",
+                  *[f"{a}     {b}           {c:.2f}" for a, (b, c) in best[:12]], sep='\n')
