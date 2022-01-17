@@ -1,8 +1,9 @@
 from collections import defaultdict
-import numpy as np
 from dataclasses import dataclass
 from functools import cache
 from typing import Type, TypeVar
+
+import numpy as np
 
 from info import Info, _set_lower
 
@@ -38,44 +39,42 @@ class Tree:
                 b &= (_set_lower - set(c))
         return Info(discovered, tuple(frozenset(b) for b in blocked))
 
+    def _steps_for_each_solution(self, info: Info, guess: str) -> int:
+        """
+        Returns:
+            A list of entries for each possible solution of the number of steps to solve the problem
+            assuming that solution is correct.
+        """
+        steps = []
+        seen_info = set[Info]()
+        for solution in self.possible_solutions:
+            new_info = info.add_guess(guess, solution)
+            if new_info in seen_info:
+                continue
+            seen_info.add(new_info)
+            new_tree = Tree(self.hard_mode,
+                            (new_info.trim(self.possible_guesses)
+                                if self.hard_mode else self.possible_guesses),
+                            new_info.trim(self.possible_solutions))
+            if set(new_tree.possible_solutions) == set(self.possible_solutions):
+                # Guess gives no new information with this solution.
+                return int_inf
+            worst = new_tree.steps_to_solve()[0]
+            steps.append(worst + 1)
+        return max(steps)
+
     @cache
     def steps_to_solve(self) -> tuple[int, str]:
         "Worst case number of possible steps after guess."
         if len(self.possible_solutions) <= 1:
-            # print("Running/returning 1 from", self.possible_solutions)
-            return 1, ""
-        # print("Running", self.possible_solutions)
-        best_guess_steps = int_inf
-        best_guess = ""
+            return 1, next(iter(self.possible_solutions))
         info = self.generate_info()
-        # print(self.possible_guesses)
-        for guess in self.possible_guesses:
-            s = set[Info]()
-            worst_case_for_guess = 0
-            for solution in self.possible_solutions:
-                new_info = info.add_guess(guess, solution)
-                if new_info in s:
-                    continue
-                s.add(new_info)
-                new_tree = Tree(self.hard_mode,
-                                (new_info.trim(self.possible_guesses)
-                                 if self.hard_mode else self.possible_guesses),
-                                new_info.trim(self.possible_solutions))
-                if set(new_tree.possible_solutions) == set(self.possible_solutions):
-                    # Guess gives no new information with this solution.
-                    worst_case_for_guess = int_inf
-                    break
-                # if len(new_tree.possible_solutions) == 1:
-                #     steps_to_solve = 2
-                steps_to_solve = new_tree.steps_to_solve()[0] + 1
-                worst_case_for_guess = max(worst_case_for_guess, steps_to_solve)
-            if worst_case_for_guess < best_guess_steps:
-                best_guess = guess
-                best_guess_steps = worst_case_for_guess
-        assert best_guess_steps != int_inf
-        print("Returning", best_guess_steps, "with guess", best_guess, "from",
-              self.possible_solutions)
-        return best_guess_steps, best_guess
+        best_steps, best_guess = min((self._steps_for_each_solution(info, guess), guess)
+                                     for guess in self.possible_guesses)
+        print(".", end="", flush=True)
+        # print("With possible solutions", sorted(self.possible_solutions),
+        #       f"it takes {best_steps} steps using the guess '{best_guess}'")
+        return best_steps, best_guess
 
     def reduce_space(self, info: Info) -> list[tuple[str, tuple[int, float]]]:
         # Map from guess to tuple of
@@ -88,6 +87,6 @@ class Tree:
                 c[info.add_guess(guess, solution)] += 1
             a = np.array(list(c.values()))
             worst_case = np.amax(a)
-            average_case = np.average(a, weights=a)
+            average_case = np.average(a, weights=a)  # type: ignore[no-untyped-call]
             worst_case_for_guess[guess] = (worst_case, average_case)
         return sorted(worst_case_for_guess.items(), key=lambda x_y: x_y[1])

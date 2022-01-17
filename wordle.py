@@ -3,16 +3,16 @@ from tree import Tree
 
 # The best opening guesses are:
 # Guess     Worst case  Average case
-# raise     168          61.00086393088553
-# arise     168          63.72570194384449
-# aesir     168          69.8829373650108
-# reais     168          71.61079913606912
-# serai     168          72.92138228941684
-# ayrie     171          78.98790496760259
-# aiery     171          87.03542116630669
-# raile     173          61.33088552915767
-# ariel     173          65.28768898488121
-# aloes     174          77.355939524838
+# raise     168          61.00
+# arise     168          63.72
+# aesir     168          69.88
+# reais     168          71.61
+# serai     168          72.92
+# ayrie     171          78.98
+# aiery     171          87.03
+# raile     173          61.33
+# ariel     173          65.28
+# aloes     174          77.35
 
 # Settings.
 hard_mode = False
@@ -28,19 +28,24 @@ info = Info.create(history=history,
                    placed=placed + ' ' * (5 - len(placed)),
                    extra_discovered=extra_discovered)
 tree = Tree.create(info, hard_mode, extended)
+n = len(tree.possible_solutions)
 
-print(f"Trimmed down to {len(tree.possible_solutions)} possible solutions")
+assert n > 0
 
+def show() -> None:
+    print(f"There are {n} possible solutions: {', '.join(tree.possible_solutions)}.")
 
-if len(tree.possible_solutions) == 0:
-    print("Error")
-elif len(tree.possible_solutions) == 1:
-    print(f"The solution is '{next(iter(tree.possible_solutions))}'")
-elif len(tree.possible_solutions) <= 10:
-    print(*tree.possible_solutions)
+if n == 1:
+    print(f"The solution is '{next(iter(tree.possible_solutions))}'.")
+elif n <= 10:
+    show()
     steps, guess = tree.steps_to_solve()
-    print(f"Can be solved in {steps} by guessing '{guess}'")
+    print(f"Guess '{guess}' to solve the problem in {steps} steps.")
 else:
+    if n < 30:
+        show()
+    else:
+        print(f"There are {n} possible solutions.")
     best = tree.reduce_space(info)
     print("Guess     Worst case  Average case",
           *[f"{a}     {b}           {c:.2f}" for a, (b, c) in best[:12]], sep='\n')
