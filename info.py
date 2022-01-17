@@ -56,6 +56,8 @@ class Info:
         blocked_everywhere = frozenset(guess) - frozenset(solution)
         blocked = tuple(_set_lower - frozenset(g)
                         if g == s else
-                        b | blocked_everywhere
+                        b | blocked_everywhere | {g}
                         for b, g, s in zip(self.blocked, guess, solution))
+        assert not any(b == _set_lower
+                       for b in blocked)
         return Info(discovered, blocked)

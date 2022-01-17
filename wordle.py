@@ -1,4 +1,3 @@
-
 from info import Info
 from tree import Tree
 
@@ -8,17 +7,18 @@ from tree import Tree
 
 # Settings.
 hard_mode = False
+extended = True
 
 # Set constants for settings and past guesses.
-history: list[str] = ['toeas', 'spine']
-placed: str = 's    '
-extra_discovered: str = 'es'
+history: list[str] = ['toeas', 'relit', 'wheft']
+placed: str = 're   '
+extra_discovered: str = 'ethet'
 
 # Convert constants into known information.
 info = Info.create(history=history,
                    placed=placed + ' ' * (5 - len(placed)),
                    extra_discovered=extra_discovered)
-tree = Tree.create(hard_mode, info)
+tree = Tree.create(info, hard_mode, extended)
 
 print(f"Trimmed down to {len(tree.possible_solutions)} possible solutions")
 if len(tree.possible_solutions) < 10:

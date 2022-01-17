@@ -6,6 +6,7 @@ from typing import Type, TypeVar
 from info import Info, _set_lower
 
 T = TypeVar('T', bound='Tree')
+int_inf = 1000000
 
 
 @dataclass(frozen=True)
@@ -15,14 +16,14 @@ class Tree:
     possible_solutions: frozenset[str]
 
     @classmethod
-    def create(cls: Type[T], hard_mode: bool, info: Info) -> T:
+    def create(cls: Type[T], info: Info, hard_mode: bool, extended: bool) -> T:
         # Read word lists.
         def read_and_strip(filename: str) -> list[str]:
             with open(filename) as f:
                 return [word.rstrip() for word in f.readlines()]
 
         words = read_and_strip('words.txt')
-        solutions = read_and_strip('solutions.txt')
+        solutions = read_and_strip('words.txt' if extended else 'solutions.txt')
         possible_guesses = info.trim(words) if hard_mode else frozenset(words)
         possible_solutions = info.trim(solutions)
         return cls(hard_mode, possible_guesses, possible_solutions)
@@ -39,10 +40,11 @@ class Tree:
     @cache
     def steps_to_solve(self) -> tuple[int, str]:
         "Worst case number of possible steps after guess."
-        print("Running", self.possible_solutions)
         if len(self.possible_solutions) <= 1:
-            return 0, ""
-        best_guess_steps = 1000000
+            # print("Running/returning 1 from", self.possible_solutions)
+            return 1, ""
+        # print("Running", self.possible_solutions)
+        best_guess_steps = int_inf
         best_guess = ""
         info = self.generate_info()
         # print(self.possible_guesses)
@@ -58,18 +60,20 @@ class Tree:
                                 (new_info.trim(self.possible_guesses)
                                  if self.hard_mode else self.possible_guesses),
                                 new_info.trim(self.possible_solutions))
-                if len(new_tree.possible_solutions) == 1:
-                    steps_to_solve = 1
-                elif set(new_tree.possible_solutions) == set(self.possible_solutions):
-                    worst_case_for_guess = 1000000
+                if set(new_tree.possible_solutions) == set(self.possible_solutions):
+                    # Guess gives no new information with this solution.
+                    worst_case_for_guess = int_inf
                     break
-                else:
-                    steps_to_solve = new_tree.steps_to_solve()[0] + 1
+                # if len(new_tree.possible_solutions) == 1:
+                #     steps_to_solve = 2
+                steps_to_solve = new_tree.steps_to_solve()[0] + 1
                 worst_case_for_guess = max(worst_case_for_guess, steps_to_solve)
             if worst_case_for_guess < best_guess_steps:
                 best_guess = guess
                 best_guess_steps = worst_case_for_guess
-        print("Returning", best_guess_steps, best_guess, self.possible_solutions)
+        assert best_guess_steps != int_inf
+        print("Returning", best_guess_steps, "with guess", best_guess, "from",
+              self.possible_solutions)
         return best_guess_steps, best_guess
 
     def reduce_space(self, info: Info) -> None:
