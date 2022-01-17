@@ -1,10 +1,9 @@
-from info import Info
-from tree import Tree
 from itertools import count
 
-original_info = Info.create(history=[],
-                            placed=' ' * 5,
-                            extra_discovered='')
+from info import Info
+from tree import Tree
+
+original_info = Info.create([])
 tree = Tree.create(original_info, False, False)
 
 for solution in tree.possible_solutions:

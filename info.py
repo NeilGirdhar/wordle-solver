@@ -1,73 +1,108 @@
 from dataclasses import dataclass
 from string import ascii_lowercase
-from typing import Iterable, Sequence, TypeVar
+from typing import Any, Iterable, Sequence, TypeVar
 
-_set_lower = frozenset(ascii_lowercase)
+import numpy as np
+import numpy.typing as npt
+
+IntegralArray = npt.NDArray[np.integer[Any]]
 T = TypeVar('T', bound='Info')
+U = TypeVar('U', bound='UnfrozenInfo')
+
+
+def char_number(s: str) -> int:
+    return ord(s) - ord('a')
+
+
+@dataclass
+class UnfrozenInfo:
+    min_count: IntegralArray  # The minimum count of each character in the alphabet.
+    max_count: IntegralArray  # The maximum count of each character in the alphabet.
+    blocked: list[set[str]]  # Five sets of characters blocked.
+
+    @classmethod
+    def create(cls: type[U], history: Sequence[tuple[str, str]]) -> U:
+        """
+        Args:
+            history: Pairs of guesses and results.  The result string is of the form:
+                "g  y " where g are the placed letters and y are the misplaced ones.
+        """
+        assert all(len(h[i]) == 5 for h in history for i in range(2))
+        guesses, results = zip(*history)
+
+        retval = cls(min_count=np.zeros(26, dtype=np.int_),
+                     max_count=5 * np.ones(26, dtype=np.int_),
+                     blocked=[set[str]()] * 5)
+        for guess, result in history:
+            retval.update_min_max(guess, result)
+        retval.polish()
+        return retval
+
+    def freeze(self) -> 'Info':
+        return Info(tuple(self.min_count), tuple(self.max_count), tuple(frozenset(b)
+                                                                        for b in self.blocked))
+
+    def update_min_max(self, guess: str, result: str) -> None:
+        seen = np.zeros(26, dtype=np.int_)
+        for b, g, r in zip(self.blocked, guess, result):
+            c = char_number(g)
+            seen[c] += 1
+            if r == " ":
+                self.max_count[c] = min(self.max_count[c], seen[c] - 1)
+            else:
+                self.min_count[c] = max(self.min_count[c], seen[c])
+            if r != 'g':
+                b.add(g)
+
+    def polish(self) -> None:
+        for mc, letter in zip(self.max_count, ascii_lowercase):
+            if mc == 0:
+                for b in self.blocked:
+                    if letter in b:
+                        b.remove(letter)
 
 
 @dataclass(frozen=True)
 class Info:
-    discovered: frozenset[str]  # A set of characters.
+    min_count: tuple[int, ...]  # The minimum count of each character in the alphabet.
+    max_count: tuple[int, ...]  # The maximum count of each character in the alphabet.
     blocked: tuple[frozenset[str], ...]  # Five sets of characters blocked.
 
     @classmethod
-    def create(cls: type[T],
-               history: Sequence[str],
-               placed: str,
-               extra_discovered: str) -> T:
-        """
-        Args:
-            history: Old guesses.
-            placed: Five characters marking known characters at these positions, or space otherwise.
-            extra_discovered: Besides the placed characters, these characters were discovered.
-        """
-        if len(placed) != 5:
-            raise ValueError
-        placed_set = frozenset(placed) - frozenset(' ')
-        if placed_set - _set_lower:
-            raise ValueError("Non-letters placed.")
+    def create(cls, history: Sequence[tuple[str, str]]) -> 'Info':
 
-        history_set = frozenset(''.join(history))
-        if history_set - _set_lower:
-            raise ValueError("Non-letters in history.")
+        return UnfrozenInfo.create(history).freeze()
 
-        discovered = frozenset(extra_discovered) | placed_set
-        if discovered - _set_lower:
-            raise ValueError("Non-letters discovered.")
-
-        if discovered - history_set:
-            raise ValueError("You must be psychic.")
-
-        blocked: list[frozenset[str]] = []
-        # These characters were in the history, but not marked as discovered.  They can't be
-        # anywhere.
-        blocked_everywhere = history_set - discovered
-        for i, p in enumerate(placed):
-            if p != ' ':
-                blocked.append(frozenset(_set_lower - set(p)))
-                continue
-            this_block = set(blocked_everywhere)  # Copy.
-            for history_word in history:
-                h = history_word[i]
-                this_block.add(h)
-            blocked.append(frozenset(this_block))
-        return cls(frozenset(discovered), tuple(blocked))
+    def unfreeze(self) -> UnfrozenInfo:
+        return UnfrozenInfo(np.array(self.min_count), np.array(self.max_count),
+                            [set(b) for b in self.blocked])
 
     def trim(self, word_list: Iterable[str]) -> frozenset[str]:
+        def counts(word: str) -> IntegralArray:
+            return np.array(list(word.count(c) for c in ascii_lowercase))
+
         return frozenset(word
                          for word in word_list
-                         if (all(d in word for d in self.discovered)
-                             and not any(w in b
-                                         for (w, b) in zip(word, self.blocked))))
+                         for c in [counts(word)]
+                         if np.all(self.min_count <= c)
+                         if np.all(self.max_count >= c)
+                         if not any(w in b
+                                    for (w, b) in zip(word, self.blocked)))
 
     def add_guess(self, guess: str, solution: str) -> 'Info':
-        discovered = self.discovered | frozenset(guess) & frozenset(solution)
-        blocked_everywhere = frozenset(guess) - frozenset(solution)
-        blocked = tuple(_set_lower - frozenset(g)
-                        if g == s else
-                        b | blocked_everywhere | {g}
-                        for b, g, s in zip(self.blocked, guess, solution))
-        assert not any(b == _set_lower
-                       for b in blocked)
-        return Info(discovered, blocked)
+        u = self.unfreeze()
+        result = [' '] * 5
+        for c in ascii_lowercase:
+            matches = sum(1
+                          for g, s in zip(guess, solution)
+                          if g == s == c)
+            yellows = solution.count(c) - matches
+            result = [r
+                      if g != c else
+                      'g'
+                      if g == c == s else
+                      'y' if (yellows := yellows - 1) > 0 else
+                      ' '
+                      for r, g, s in zip(result, guess, solution)]
+        u.update_min_max(guess, "".join(result))
+        return u.freeze()

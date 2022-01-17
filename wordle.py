@@ -1,6 +1,5 @@
 from info import Info
 from tree import Tree
-from itertools import count
 
 # The best opening guesses are:
 # Guess     Worst case  Average case
@@ -20,13 +19,9 @@ hard_mode = False
 extended = False
 
 # Set constants for settings and past guesses.
-history: list[str] = ['raise']
-placed: str = '     '
-extra_discovered: str = ''
+history: list[tuple[str, str]] = [('raise', '     ')]
 
 # Convert constants into known information.
-info = Info.create(history=history,
-                   placed=placed + ' ' * (5 - len(placed)),
-                   extra_discovered=extra_discovered)
+info = Info.create(history)
 tree = Tree.create(info, hard_mode, extended)
 tree.display_instructions(info)

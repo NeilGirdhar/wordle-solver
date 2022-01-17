@@ -1,14 +1,16 @@
 from collections import defaultdict
 from dataclasses import dataclass
 from functools import cache
+from string import ascii_lowercase
 from typing import Type, TypeVar
 
 import numpy as np
 
-from info import Info, _set_lower
+from info import Info, UnfrozenInfo
 
 T = TypeVar('T', bound='Tree')
 int_inf = 1000000
+_set_lower = frozenset(ascii_lowercase)
 
 
 @dataclass(frozen=True)
@@ -32,12 +34,18 @@ class Tree:
 
     def generate_info(self) -> Info:
         word_list = self.possible_guesses if self.hard_mode else self.possible_solutions
-        discovered = frozenset.intersection(*[frozenset(w) for w in word_list])
-        blocked = [set(_set_lower)] * 5
+        u = UnfrozenInfo(min_count=5 * np.ones(26, dtype=np.int_),
+                         max_count=np.zeros(26, dtype=np.int_),
+                         blocked=[set(_set_lower)] * 5)
+        for i, letter in enumerate(ascii_lowercase):
+            for word in word_list:
+                c = word.count(letter)
+                u.min_count[i] = min(u.min_count[i], c)
+                u.max_count[i] = max(u.max_count[i], c)
         for word in word_list:
-            for c, b in zip(word, blocked):
-                b &= (_set_lower - set(c))
-        return Info(discovered, tuple(frozenset(b) for b in blocked))
+            for char, b in zip(word, u.blocked):
+                b &= (_set_lower - set(char))
+        return u.freeze()
 
     def _steps_for_each_solution(self, info: Info, guess: str) -> int:
         """
@@ -81,7 +89,7 @@ class Tree:
         # * worst case number of possible solutions after guess
         # * average case number of possible solutions after guess
         worst_case_for_guess = {}
-        for guess in self.possible_guesses:
+        for i, guess in enumerate(self.possible_guesses):
             c = defaultdict[Info, int](int)
             for solution in self.possible_solutions:
                 c[info.add_guess(guess, solution)] += 1
@@ -89,6 +97,7 @@ class Tree:
             worst_case = np.amax(a)
             average_case = np.average(a, weights=a)  # type: ignore[no-untyped-call]
             worst_case_for_guess[guess] = (worst_case, average_case)
+            print(f"guessing {i}/{len(self.possible_guesses)}", guess, worst_case, average_case)
         return sorted(worst_case_for_guess.items(), key=lambda x_y: x_y[1])
 
     def best_guess(self, info: Info) -> str:
