@@ -76,27 +76,27 @@ class Tree:
         #       f"it takes {best_steps} steps using the guess '{best_guess}'")
         return best_steps, best_guess
 
+    def _worst_case_for_guess(self, info: Info, guess: str) -> tuple[int, float]:
+        c = defaultdict[Info, int](int)
+        for solution in self.possible_solutions:
+            c[info.add_guess(guess, solution)] += 1
+        a = np.array(list(c.values()))
+        worst_case = np.amax(a)
+        average_case = np.average(a, weights=a)  # type: ignore[no-untyped-call]
+        return worst_case, average_case
+
     def reduce_space(self, info: Info) -> list[tuple[str, tuple[int, float]]]:
-        # Map from guess to tuple of
-        # * worst case number of possible solutions after guess
-        # * average case number of possible solutions after guess
-        worst_case_for_guess = {}
-        for guess in self.possible_guesses:
-            c = defaultdict[Info, int](int)
-            for solution in self.possible_solutions:
-                c[info.add_guess(guess, solution)] += 1
-            a = np.array(list(c.values()))
-            worst_case = np.amax(a)
-            average_case = np.average(a, weights=a)  # type: ignore[no-untyped-call]
-            worst_case_for_guess[guess] = (worst_case, average_case)
+        worst_case_for_guess = {guess: self._worst_case_for_guess(info, guess)
+                                for guess in self.possible_guesses}
         return sorted(worst_case_for_guess.items(), key=lambda x_y: x_y[1])
 
     def best_guess(self, info: Info) -> str:
         n = len(self.possible_solutions)
         if n == 1:
             return next(iter(self.possible_solutions))
-        best = self.reduce_space(info)
-        return best[0][0]
+        best = min((self._worst_case_for_guess(info, guess), guess)
+                   for guess in self.possible_guesses)
+        return best[1]
 
     def display_instructions(self, info: Info) -> None:
         n = len(self.possible_solutions)
