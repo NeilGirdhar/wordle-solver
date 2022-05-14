@@ -100,7 +100,10 @@ class Tree:
 
     def display_instructions(self, info: Info) -> None:
         n = len(self.possible_solutions)
-        assert n > 0
+        assert n >= 0
+        if n == 0:
+            print(f"The solution is impossible.")
+            return
         if n == 1:
             print(f"The solution is '{next(iter(self.possible_solutions))}'.")
             return
