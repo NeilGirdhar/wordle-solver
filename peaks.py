@@ -25,7 +25,7 @@ for word in words:
     for solution in solutions:
         patterns[pattern(solution, word)] += 1
     bins = np.array(list(patterns.values()))
-    entropies[word] = entropy(bins / len(solutions))
+    entropies[word] = entropy(bins / len(solutions), base=2)
 
 sorted_pairs = sorted([(entropy_, word) for word, entropy_ in entropies.items()])
 print("\n".join(f"{word}: {entropy_}" for entropy_, word in sorted_pairs))
