@@ -1,7 +1,7 @@
 from collections import defaultdict
 from dataclasses import dataclass
 from functools import cache
-from typing import Type, TypeVar
+from typing import TypeVar
 
 import numpy as np
 
@@ -18,7 +18,7 @@ class Tree:
     possible_solutions: frozenset[str]
 
     @classmethod
-    def create(cls: Type[T], info: Info, hard_mode: bool, extended: bool) -> T:
+    def create(cls: type[T], info: Info, hard_mode: bool, extended: bool) -> T:
         # Read word lists.
         def read_and_strip(filename: str) -> list[str]:
             with open(filename) as f:

@@ -1,6 +1,7 @@
+from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
 from string import ascii_lowercase
-from typing import Iterable, Sequence, TypeVar
+from typing import TypeVar
 
 _set_lower = frozenset(ascii_lowercase)
 T = TypeVar('T', bound='Info')
